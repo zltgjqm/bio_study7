@@ -82,22 +82,53 @@
   ].map(([label, count]) => `<span class="count-pill"><b>${count}</b> ${label}</span>`).join("");
 
 const quick = document.getElementById("quick-lists");
+const localData = wiki.loadLocalData();
 
-const recentItems = [
-  ...graph.papers.map((item) => ({ ...item, recentType: "Paper" })),
-  ...graph.knowledge.map((item) => ({ ...item, recentType: "Knowledge" })),
-].slice().reverse().slice(0, 8);
+function recentUnique(values, limit = 6) {
+  const seen = new Set();
+  return values
+    .map((v) => String(v || "").trim())
+    .filter(Boolean)
+    .reverse()
+    .filter((v) => {
+      const key = v.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, limit);
+}
 
-quick.innerHTML = recentItems.length
-  ? recentItems.map((item) => `
-    <a class="cat-card ${item.type === "paper" ? "disease" : "cell"}" href="${wiki.entityUrl(item)}">
-      <h3>${wiki.escapeHtml(item.displayName || item.title)}</h3>
-      <p>${wiki.escapeHtml(item.description || item.journal || item.category || "")}</p>
-      <span class="go">${item.recentType} →</span>
-    </a>
-  `).join("")
-  : `<div class="cat-card"><h3>아직 추가한 항목이 없습니다</h3><p>+ Add에서 Paper나 Knowledge를 추가하면 여기에 뜹니다.</p></div>`;
+const recentPapers = (localData.papers || []).slice().reverse();
 
+const recentEntities = {
+  diseases: recentUnique(recentPapers.flatMap((p) => p.disease || p.diseases || [])),
+  genes: recentUnique(recentPapers.flatMap((p) => p.genes || [])),
+  cellTypes: recentUnique(recentPapers.flatMap((p) => p.cellTypes || [])),
+  tissues: recentUnique(recentPapers.flatMap((p) => p.tissues || [])),
+};
+
+const recentCards = [
+  ["Recently added Disease", recentEntities.diseases, "disease", "disease"],
+  ["Recently added Gene", recentEntities.genes, "gene", "gene"],
+  ["Recently added Cell Type", recentEntities.cellTypes, "cell", "cell_type"],
+  ["Recently added Tissue", recentEntities.tissues, "tissue", "tissue"],
+];
+
+quick.innerHTML = recentCards.map(([title, items, cls, type]) => `
+  <div class="cat-card ${cls}">
+    <h3>${title}</h3>
+    ${
+      items.length
+        ? `<div class="chip-row">${items.map((name) => `
+          <a class="chip" href="${wiki.entityUrl({ type, id: wiki.slugify(name), displayName: name })}">
+            <span class="dot ${type}"></span>${wiki.escapeHtml(name)}
+          </a>
+        `).join("")}</div>`
+        : `<p>아직 최근 추가 항목이 없습니다.</p>`
+    }
+  </div>
+`).join("");
   const list = document.getElementById("paper-list");
   graph.papers.slice().sort((a,b) => (b.year || 0) - (a.year || 0)).forEach((p) => {
     const el = document.createElement("a");

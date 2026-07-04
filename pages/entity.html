@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Biology Second Brain · Entity</title>
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="mark"></span><a href="../index.html">Biology Second Brain</a><span class="sub">/ connected view</span></div>
+  <nav class="top-links"><a href="../index.html">Home</a><a href="library.html">My Library</a><a href="add.html">+ Add</a></nav>
+</header>
+<ul class="base-track"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></ul>
+<main class="shell">
+  <div class="crumb"><a href="../index.html">Home</a> / <span id="crumb-label">Entity</span></div>
+  <div class="search-wrap" style="margin: 18px 0 8px;">
+    <div class="search-box">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="search-input" type="text" placeholder="Gene, Cell Type, Tissue, Disease, Paper를 검색하세요." autocomplete="off" />
+    </div>
+    <div id="search-results" class="search-results"></div>
+  </div>
+  <div id="entity-root"></div>
+</main>
+<footer>입력한 Paper와 Knowledge를 기반으로 자동 연결됩니다.</footer>
+<script src="../assets/data.js"></script>
+<script src="../assets/search.js"></script>
+<script>
+const wiki = window.BiologyWiki;
+window.initWikiSearch({ inputId: "search-input", resultsId: "search-results", basePath: "../" });
+const graph = wiki.buildKnowledgeGraph(window.WIKI_DATA);
+const params = new URLSearchParams(location.search);
+const type = params.get("type") || "disease";
+const id = params.get("id") || "";
+const nameParam = params.get("name") || "";
+const collections = { disease: graph.diseases, gene: graph.genes, cell_type: graph.cellTypes, tissue: graph.tissues, paper: graph.papers, knowledge: graph.knowledge };
+let item = (collections[type] || []).find((x) => x.id === id) || (collections[type] || []).find((x) => wiki.slugify(x.displayName || x.title) === id);
+if (!item && nameParam) item = { type, id: id || wiki.slugify(nameParam), displayName: nameParam, title: nameParam, label: wiki.TYPE_LABELS[type] || type, description: "" };
+const root = document.getElementById("entity-root");
+function dotType(t) { return t === "knowledge" ? "paper" : t; }
+function chip(type, name) {
+  if (!name) return "";
+  const obj = { type, id: wiki.slugify(name), displayName: name };
+  return `<a class="chip" href="${wiki.entityUrl(obj, "../")}"><span class="dot ${dotType(type)}"></span>${wiki.escapeHtml(name)}</a>`;
+}
+function section(title, html) {
+  return `<div class="block"><h2>${title}</h2>${html || `<p style="color:var(--text-faint);">아직 연결된 항목이 없습니다.</p>`}</div>`;
+}
+function chipSection(title, type, values) {
+  return section(title, values && values.length ? `<div class="chip-row">${values.map((v) => chip(type, v)).join("")}</div>` : "");
+}
+function paperCard(p) {
+  const diseaseNote = item && item.type === "disease" ? wiki.diseaseSpecificNote(p, display) : [];
+  const noteHtml = diseaseNote.length ? `<div class="disease-note-preview"><b>${wiki.escapeHtml(display)} note</b>${diseaseNote.map((n) => `<p>${wiki.escapeHtml(n)}</p>`).join("")}</div>` : "";
+  return `<a class="paper-card" href="${wiki.entityUrl(p, "../")}"><div class="paper-main"><p class="paper-title">${wiki.escapeHtml(p.title)}</p><div class="paper-meta"><span>${wiki.escapeHtml(p.authors || "")}</span><span>·</span><span>${wiki.escapeHtml(p.journal || "")}</span><span>·</span><span>${wiki.escapeHtml(p.year || "")}</span></div>${noteHtml}<div class="tag-row">${(p.tags || []).map((t) => `<span class="tag">${wiki.escapeHtml(t)}</span>`).join("")}</div></div><span class="paper-open">Open →</span></a>`;
+}
+function knowledgeCard(k) {
+  return `<a class="paper-card" href="${wiki.entityUrl(k, "../")}"><div class="paper-main"><p class="paper-title">${wiki.escapeHtml(k.title)}</p><div class="paper-meta"><span>${wiki.escapeHtml(k.category || "Knowledge")}</span><span>·</span><span>${wiki.escapeHtml(k.source || "개인 메모")}</span></div><div class="tag-row">${(k.tags || []).map((t) => `<span class="tag">${wiki.escapeHtml(t)}</span>`).join("")}</div></div><span class="paper-open">Open →</span></a>`;
+}
+function unitCard(u) {
+  const p = u.paper;
+  const links = [
+    ...(u.disease || []).map((x) => chip("disease", x)),
+    ...(u.genes || []).map((x) => chip("gene", x)),
+    ...(u.cellTypes || []).map((x) => chip("cell_type", x)),
+    ...(u.tissues || []).map((x) => chip("tissue", x)),
+  ].join("");
+  return `<div class="knowledge-unit-card">
+    <div class="unit-title">${wiki.escapeHtml(u.claim || u.title)}</div>
+    ${u.evidence ? `<div class="unit-evidence">Evidence · ${wiki.escapeHtml(u.evidence)}</div>` : ""}
+    ${u.note ? `<p>${wiki.escapeHtml(u.note)}</p>` : ""}
+    ${links ? `<div class="chip-row">${links}</div>` : ""}
+    ${p ? `<a class="unit-paper" href="${wiki.entityUrl(p, "../")}">from ${wiki.escapeHtml(p.title)}</a>` : ""}
+  </div>`;
+}
+function coOccurrenceSection(title, values, type) {
+  const counted = values.reduce((acc, v) => { const key = wiki.norm(v); if (!key) return acc; acc[key] = acc[key] || { name: v, count: 0 }; acc[key].count += 1; return acc; }, {});
+  const sorted = Object.values(counted).sort((a,b) => b.count - a.count).slice(0, 12);
+  return section(title, sorted.length ? `<div class="chip-row">${sorted.map((x) => `${chip(type, x.name)}<span class="tag">${x.count}</span>`).join("")}</div>` : "");
+}
+function deleteCurrentItem() {
+  if (!item || item.source !== "local") return;
+  if (!confirm(`삭제할까요?\n\n${display}\n\n이 브라우저의 localStorage에서 삭제됩니다.`)) return;
+  wiki.deleteLocalItem(item.type, item.id);
+  location.href = "library.html";
+}
+function listSection(title, items, renderer) {
+  return section(title, items && items.length ? `<div class="paper-list">${items.map(renderer).join("")}</div>` : "");
+}
+if (!item) {
+  root.innerHTML = `<div class="side-box"><h3>찾을 수 없습니다</h3><p class="detail-sub">요청한 항목을 찾지 못했어요. 홈에서 다시 검색해보세요.</p></div>`;
+} else {
+  document.title = `${item.displayName || item.title} · Biology Second Brain`;
+  document.getElementById("crumb-label").textContent = item.displayName || item.title;
+  const related = wiki.relatedFor(item, graph);
+  const units = wiki.knowledgeUnitsFor(item, graph);
+  const display = item.displayName || item.title;
+  let body = "";
+  let side = "";
+  if (item.type === "paper") {
+    body += section("Two-line Summary", (item.summary || []).map((s) => `<p style="margin-bottom:8px;">${wiki.escapeHtml(s)}</p>`).join(""));
+    body += section("새롭게 알게 된 내용(New Knowledge)", (item.newKnowledge || []).map((s) => `<p style="margin-bottom:8px;">${wiki.escapeHtml(s)}</p>`).join(""));
+    body += listSection("Knowledge Units", units, unitCard);
+    const dn = item.diseaseNotes || {};
+    const dnHtml = Object.keys(dn).length ? Object.keys(dn).map((d) => `<div class="disease-note-preview"><b>${wiki.escapeHtml(d)}</b>${wiki.asArray(dn[d]).map((n) => `<p>${wiki.escapeHtml(n)}</p>`).join("")}</div>`).join("") : "";
+    body += section("Disease-specific Notes", dnHtml);
+    body += chipSection("Disease", "disease", item.disease || []);
+    body += chipSection("Genes", "gene", item.genes || []);
+    body += chipSection("Cell Types", "cell_type", item.cellTypes || []);
+    body += chipSection("Tissues", "tissue", item.tissues || []);
+    side += `<div class="side-box"><h3>Paper Info</h3><div class="row"><span>Journal</span><span>${wiki.escapeHtml(item.journal || "—")}</span></div><div class="row"><span>Year</span><span>${wiki.escapeHtml(item.year || "—")}</span></div><div class="row"><span>DOI/URL</span><span>${item.doiOrUrl ? `<a href="${wiki.escapeHtml(item.doiOrUrl)}" target="_blank">Open</a>` : "—"}</span></div></div>`;
+  } else if (item.type === "knowledge") {
+    body += section("Knowledge", (item.knowledge || []).map((s) => `<p style="margin-bottom:8px;">${wiki.escapeHtml(s)}</p>`).join(""));
+    body += chipSection("Related Disease", "disease", item.relatedDiseases || []);
+    body += chipSection("Related Genes", "gene", item.relatedGenes || []);
+    body += chipSection("Related Cell Types", "cell_type", item.relatedCellTypes || []);
+    body += chipSection("Related Tissues", "tissue", item.relatedTissues || []);
+    side += `<div class="side-box"><h3>Knowledge Info</h3><div class="row"><span>Category</span><span>${wiki.escapeHtml(item.category || "Note")}</span></div><div class="row"><span>Source</span><span>${wiki.escapeHtml(item.source || "—")}</span></div></div>`;
+  } else if (item.type === "disease") {
+    body += section("Overview", `<p>${wiki.escapeHtml(item.description || `${display}와 연결된 Paper/Knowledge를 모아 보여줍니다.`)}</p>`);
+    body += listSection("Claim / Knowledge Units", units, unitCard);
+    body += chipSection("Major Genes", "gene", related.genes);
+    body += chipSection("Cell Types", "cell_type", related.cellTypes);
+    body += chipSection("Tissues", "tissue", related.tissues);
+    body += listSection("Related Papers", related.papers, paperCard);
+    body += listSection("Related Knowledge", related.knowledge, knowledgeCard);
+  } else if (item.type === "gene") {
+    body += section("Overview", `<p>${wiki.escapeHtml(item.description || `${display}와 연결된 Disease, Cell Type, Tissue, Paper를 모아 보여줍니다.`)}</p>`);
+    body += listSection("Claim / Knowledge Units", units, unitCard);
+    body += chipSection("Related Disease", "disease", related.diseases);
+    body += chipSection("Related Cell Types", "cell_type", related.cellTypes);
+    body += chipSection("Related Tissues", "tissue", related.tissues);
+    body += listSection("Related Papers", related.papers, paperCard);
+    body += listSection("Related Knowledge", related.knowledge, knowledgeCard);
+  } else if (item.type === "cell_type") {
+    body += section("Overview", `<p>${wiki.escapeHtml(item.description || `${display}와 연결된 Disease, Gene, Tissue, Paper를 모아 보여줍니다.`)}</p>`);
+    body += listSection("Claim / Knowledge Units", units, unitCard);
+    body += chipSection("Related Disease", "disease", related.diseases);
+    body += chipSection("Related Genes", "gene", related.genes);
+    body += chipSection("Related Tissues", "tissue", related.tissues);
+    body += listSection("Related Papers", related.papers, paperCard);
+    body += listSection("Related Knowledge", related.knowledge, knowledgeCard);
+  } else if (item.type === "tissue") {
+    body += section("Overview", `<p>${wiki.escapeHtml(item.description || `${display}와 연결된 Disease, Gene, Cell Type, Paper를 모아 보여줍니다.`)}</p>`);
+    body += listSection("Claim / Knowledge Units", units, unitCard);
+    body += chipSection("Related Disease", "disease", related.diseases);
+    body += chipSection("Related Genes", "gene", related.genes);
+    body += chipSection("Cell Types", "cell_type", related.cellTypes);
+    body += listSection("Related Papers", related.papers, paperCard);
+    body += listSection("Related Knowledge", related.knowledge, knowledgeCard);
+  }
+  const tags = (item.tags || []).map((t) => `<span class="tag">${wiki.escapeHtml(t)}</span>`).join("");
+  if (item.source === "local") side += `<div class="side-box"><h3>Manage</h3><div class="action-row" style="margin:0;"><a class="btn secondary" href="add.html?type=${encodeURIComponent(item.type)}&edit=${encodeURIComponent(item.id)}">Edit</a><button class="btn danger" onclick="deleteCurrentItem()">Delete</button></div></div>`;
+  side += `<div class="side-box"><h3>Quick facts</h3><div class="row"><span>Papers</span><span>${related.papers.length}</span></div><div class="row"><span>Knowledge</span><span>${related.knowledge.length}</span></div><div class="row"><span>Knowledge Units</span><span>${units.length}</span></div></div>`;
+  if (tags) side += `<div class="side-box"><h3>Tags</h3><div class="tag-row">${tags}</div></div>`;
+  root.innerHTML = `
+    <div class="detail-head"><span class="dot ${dotType(item.type)}" style="width:11px;height:11px;"></span><h1 style="font-family: var(--font-display); font-size: 28px; line-height:1.25;">${wiki.escapeHtml(display)}</h1></div>
+    <p class="detail-sub">${wiki.escapeHtml(item.label || wiki.TYPE_LABELS[item.type] || "Entity")}${item.fullName ? " · " + wiki.escapeHtml(item.fullName) : ""}</p>
+    <div class="detail-grid"><div>${body}</div><aside>${side}</aside></div>`;
+}
+</script>
+</body>
+</html>

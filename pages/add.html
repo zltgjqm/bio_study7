@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>새로운 Biology Knowledge 추가 · Biology Second Brain</title>
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="mark"></span><a href="../index.html">Biology Second Brain</a><span class="sub">/ add knowledge</span></div>
+  <nav class="top-links">
+    <a href="../index.html">Home</a>
+    <a href="library.html">My Library</a>
+    <a href="../index.html#papers">Paper</a>
+  </nav>
+</header>
+<ul class="base-track"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></ul>
+
+<main class="add-shell">
+  <section class="hero" style="padding-bottom:22px;">
+    <div class="hero-eyebrow" id="mode-label">Manual input · saved in your browser</div>
+    <h1 id="page-title">새로운 Biology Knowledge 추가</h1>
+    <p>Paper 또는 개인 Knowledge를 입력하면 이 브라우저에 저장되고, 홈 검색과 연결 페이지에 바로 반영됩니다. 여러 Disease가 있는 Paper는 Disease별 note를 따로 저장할 수 있어요.</p>
+  </section>
+
+  <div class="add-layout">
+    <section>
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="paper">1 · Paper 직접 입력</button>
+        <button class="tab-btn" data-tab="knowledge">2 · Knowledge 직접 입력</button>
+        <button class="tab-btn" data-tab="paste">GPT JSON 붙여넣기</button>
+        <button class="tab-btn" data-tab="backup">Backup</button>
+      </div>
+
+      <div class="side-box tab-panel active" id="tab-paper">
+        <h3>Paper 기반 입력</h3>
+        <p class="detail-sub" style="margin-bottom:18px;">논문 하나를 읽고 발견한 Disease, Gene, Cell Type, Tissue 관계를 저장합니다.</p>
+        <div class="form-grid">
+          <div class="form-field full"><label>Diseases <small>쉼표로 여러 개 가능</small></label><input id="p-disease" placeholder="PDAC, CRC" /></div>
+          <div class="form-field full"><label>Disease-specific Notes <small>각 Disease에서 중요한 해석을 따로 저장</small></label><div id="disease-note-fields" class="note-stack"></div><p class="field-help">Diseases 입력칸에 쉼표로 여러 Disease를 쓰면 note 칸이 자동으로 생깁니다.</p></div>
+          <div class="form-field"><label>Gene <small>쉼표로 여러 개</small></label><input id="p-genes" placeholder="KRAS, CXCL12" /></div>
+          <div class="form-field"><label>Cell Types <small>쉼표</small></label><input id="p-cellTypes" placeholder="CAF, Macrophage" /></div>
+          <div class="form-field"><label>Tissues <small>쉼표</small></label><input id="p-tissues" placeholder="Pancreas" /></div>
+          <div class="form-field full"><label>Paper Title</label><input id="p-title" placeholder="Paper title" /></div>
+          <div class="form-field"><label>Journal</label><input id="p-journal" placeholder="Nature" /></div>
+          <div class="form-field"><label>Year</label><input id="p-year" type="number" placeholder="2025" /></div>
+          <div class="form-field full"><label>Authors</label><input id="p-authors" placeholder="Kim J, Lee H, et al." /></div>
+          <div class="form-field full"><label>DOI 또는 URL</label><input id="p-doiOrUrl" placeholder="https://doi.org/..." /></div>
+          <div class="form-field full"><label>Two-line Summary</label><textarea id="p-summary" placeholder="두 줄 요약을 줄바꿈으로 입력하세요."></textarea></div>
+          <div class="form-field full"><label>새롭게 알게 된 내용(New Knowledge)</label><textarea id="p-newKnowledge" placeholder="새롭게 알게 된 내용을 줄바꿈으로 입력하세요."></textarea></div>
+          <div class="form-field full"><label>Knowledge Units <small>한 논문 안의 주장/지식 덩어리를 JSON 배열로 분리</small></label><textarea id="p-knowledgeUnits" class="import-box" placeholder='[{"claim":"KRAS activation increases inflammatory signaling","genes":["KRAS","IL1B"],"cellTypes":["CAF"],"disease":["PDAC"],"tissues":["Pancreas"],"evidence":"Figure 2","note":"..."}]'></textarea><small>비워도 저장 가능하지만, 논문 안에 독립된 지식이 2개 이상이면 여기에 나눠 넣으면 Entity 페이지에서 따로 모입니다.</small></div>
+          <div class="form-field full"><label>Tags</label><input id="p-tags" placeholder="PDAC, scRNA-seq" /></div>
+        </div>
+        <div class="action-row"><button class="btn" onclick="savePaperForm()" id="paper-save-btn">Save to Browser</button><button class="btn secondary" onclick="previewPaperForm()">Preview JSON</button><button class="btn secondary" onclick="samplePaper()">Sample</button><span class="status" id="paper-status"></span></div>
+        <textarea id="paper-preview" class="json-output" readonly placeholder="Preview JSON을 누르면 여기에 표시됩니다."></textarea>
+      </div>
+
+      <div class="side-box tab-panel" id="tab-knowledge">
+        <h3>Knowledge 기반 입력</h3>
+        <p class="detail-sub" style="margin-bottom:18px;">논문이 아니어도, 실험 메모/랩미팅/리뷰 중 알게 된 Biology 지식을 저장합니다.</p>
+        <div class="form-grid">
+          <div class="form-field"><label>Category</label><select id="k-category"><option>Gene</option><option>Disease</option><option>Cell Type</option><option>Tissue</option><option>Note</option></select></div>
+          <div class="form-field"><label>Title</label><input id="k-title" placeholder="CXCL12 axis in PDAC" /></div>
+          <div class="form-field"><label>Related Disease</label><input id="k-diseases" placeholder="PDAC" /></div>
+          <div class="form-field"><label>Related Genes</label><input id="k-genes" placeholder="CXCL12, CXCR4" /></div>
+          <div class="form-field"><label>Related Cell Types</label><input id="k-cellTypes" placeholder="CAF, T cell" /></div>
+          <div class="form-field"><label>Related Tissues</label><input id="k-tissues" placeholder="Pancreas" /></div>
+          <div class="form-field full"><label>Knowledge</label><textarea id="k-knowledge" placeholder="줄바꿈으로 여러 개 입력할 수 있어요."></textarea></div>
+          <div class="form-field full"><label>Source</label><input id="k-source" placeholder="랩미팅, 리뷰논문, 내 메모 등" /></div>
+          <div class="form-field full"><label>Tags</label><input id="k-tags" placeholder="PDAC, immune exclusion" /></div>
+        </div>
+        <div class="action-row"><button class="btn" onclick="saveKnowledgeForm()" id="knowledge-save-btn">Save to Browser</button><button class="btn secondary" onclick="previewKnowledgeForm()">Preview JSON</button><button class="btn secondary" onclick="sampleKnowledge()">Sample</button><span class="status" id="knowledge-status"></span></div>
+        <textarea id="knowledge-preview" class="json-output" readonly placeholder="Preview JSON을 누르면 여기에 표시됩니다."></textarea>
+      </div>
+
+      <div class="side-box tab-panel" id="tab-paste">
+        <h3>GPT JSON 붙여넣기</h3>
+        <p class="detail-sub" style="margin-bottom:18px;">ChatGPT가 정리한 JSON 하나 또는 배열을 붙여넣고 저장하세요. Paper와 Knowledge 둘 다 가능합니다.</p>
+        <textarea id="paste-json" class="import-box" placeholder='{"type":"paper","disease":["PDAC","CRC"],"diseaseNotes":{"PDAC":["..."],"CRC":["..."]},...}'></textarea>
+        <div class="action-row"><button class="btn secondary" onclick="validatePastedJSON()">Validate</button><button class="btn" onclick="savePastedJSON()">Save to Browser</button><span class="status" id="paste-status"></span></div>
+        <ul class="validation-list" id="validation-list"></ul>
+      </div>
+
+      <div class="side-box tab-panel" id="tab-backup">
+        <h3>Backup / Import / Export</h3>
+        <p class="detail-sub" style="margin-bottom:18px;">localStorage는 현재 브라우저에만 저장됩니다. 주기적으로 백업 JSON을 저장해두는 것을 추천합니다.</p>
+        <div class="action-row"><button class="btn" onclick="exportBackup()">Export Backup</button><button class="btn secondary" onclick="downloadBackup()">Download .json</button><button class="btn danger" onclick="clearLocalData()">Clear Local Data</button><span class="status" id="backup-status"></span></div>
+        <textarea id="backup-box" class="json-output" placeholder="Export Backup을 누르면 현재 브라우저에 저장된 데이터가 표시됩니다."></textarea>
+        <div class="action-row"><button class="btn secondary" onclick="importBackup()">Import from Box</button></div>
+        <div id="local-list" class="local-list"></div>
+      </div>
+    </section>
+
+    <aside class="help-card">
+      <div class="mini-panel">
+        <h3>AI에게 이 양식으로 물어보세요</h3>
+        <p>논문을 ChatGPT에 넣고 아래 prompt를 같이 붙이면, 이 사이트에 바로 저장할 수 있는 JSON을 받을 수 있어요.</p>
+        <div class="action-row"><button class="btn secondary" onclick="setPrompt('paper')">Paper Prompt</button><button class="btn secondary" onclick="setPrompt('knowledge')">Knowledge Prompt</button><button class="btn" onclick="copyPrompt()">Copy Prompt</button></div>
+        <textarea id="prompt-box" class="prompt-box" readonly></textarea>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<footer>저장된 데이터는 이 브라우저의 localStorage에 보관됩니다. 백업을 잊지 마세요.</footer>
+<script src="../assets/data.js"></script>
+<script src="../assets/search.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const wiki = window.BiologyWiki;
+const params = new URLSearchParams(location.search);
+let editType = params.get("type");
+let editId = params.get("edit");
+
+const PAPER_PROMPT = `아래 논문 내용을 Biology Second Brain에 넣을 수 있도록 JSON으로 정리해줘.
+
+규칙:
+- Disease, Gene, Cell Type, Tissue, Paper, Dataset, Marker Gene 같은 Biology 용어는 영어로 유지
+- 설명은 자연스러운 한국어로 작성
+- 결과는 JSON만 출력
+- 없는 정보는 빈 문자열 또는 빈 배열
+- disease는 여러 개 가능
+- diseaseNotes는 Disease별로 이 논문이 왜 중요한지 따로 정리
+- 한 논문 안에 독립적인 지식 덩어리/claim이 2개 이상이면 knowledgeUnits 배열로 반드시 분리
+- 각 knowledgeUnit은 claim, disease, genes, cellTypes, tissues, evidence, note를 포함
+- Disease/Gene/Cell Type/Tissue 이름은 표준명으로 통일. 예: Pancreatic ductal adenocarcinoma→PDAC, pancreatic cancer→PDAC, lung tissue→Lung, Treg→Regulatory T cell
+- summary는 반드시 2줄 배열
+- newKnowledge는 새롭게 알게 된 내용을 배열로 정리
+- 아래 schema를 반드시 지킬 것
+
+Schema:
+{
+  "type": "paper",
+  "disease": [],
+  "diseaseNotes": {
+    "Disease name": [""]
+  },
+  "genes": [],
+  "cellTypes": [],
+  "tissues": [],
+  "title": "",
+  "journal": "",
+  "year": 0,
+  "authors": "",
+  "doiOrUrl": "",
+  "summary": ["", ""],
+  "newKnowledge": [""],
+  "knowledgeUnits": [
+    {
+      "claim": "",
+      "disease": [],
+      "genes": [],
+      "cellTypes": [],
+      "tissues": [],
+      "evidence": "",
+      "note": "",
+      "tags": []
+    }
+  ],
+  "tags": []
+}
+
+논문 내용:
+`;
+
+const KNOWLEDGE_PROMPT = `아래 내용을 Biology Second Brain에 넣을 수 있도록 JSON으로 정리해줘.
+
+이건 논문이 아니라 개인 지식/메모/개념 정리야.
+
+규칙:
+- Disease, Gene, Cell Type, Tissue 같은 Biology 용어는 영어로 유지
+- 설명은 자연스러운 한국어로 작성
+- JSON만 출력
+- 없는 정보는 빈 문자열 또는 빈 배열
+- 아래 schema를 반드시 지킬 것
+
+Schema:
+{
+  "type": "knowledge",
+  "category": "Gene | Disease | Cell Type | Tissue | Note",
+  "title": "",
+  "relatedDiseases": [],
+  "relatedGenes": [],
+  "relatedCellTypes": [],
+  "relatedTissues": [],
+  "knowledge": ["", ""],
+  "source": "",
+  "tags": []
+}
+
+정리할 내용:
+`;
+
+function splitComma(id) { return $(id).value.split(",").map((x) => x.trim()).filter(Boolean); }
+function parseKnowledgeUnitsBox() {
+  const raw = $("p-knowledgeUnits").value.trim();
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return wiki.normalizeKnowledgeUnits(Array.isArray(parsed) ? parsed : [parsed]);
+  } catch (e) {
+    return { error: "Knowledge Units JSON 형식이 올바르지 않습니다: " + e.message };
+  }
+}
+function splitLines(id) { return $(id).value.split("\n").map((x) => x.trim()).filter(Boolean); }
+function nowId(prefix) { return `${prefix}-${Date.now().toString(36)}`; }
+function normalizeDiseaseNotes(raw = {}) {
+  const out = {};
+  Object.keys(raw || {}).forEach((key) => {
+    const value = raw[key];
+    const lines = Array.isArray(value) ? value.filter(Boolean) : String(value || "").split("\n").map((x) => x.trim()).filter(Boolean);
+    const canon = wiki.canonicalize("disease", key.trim());
+    if (canon && lines.length) out[canon] = lines;
+  });
+  return out;
+}
+function normalizePaper(obj) {
+  return {
+    type: "paper",
+    id: obj.id || nowId("paper"),
+    disease: wiki.canonicalArray("disease", obj.disease || obj.diseases),
+    diseaseNotes: normalizeDiseaseNotes(obj.diseaseNotes),
+    genes: wiki.canonicalArray("gene", obj.genes),
+    cellTypes: wiki.canonicalArray("cell_type", obj.cellTypes),
+    tissues: wiki.canonicalArray("tissue", obj.tissues),
+    title: String(obj.title || "Untitled Paper").trim(),
+    journal: String(obj.journal || "").trim(),
+    year: obj.year ? Number(obj.year) : "",
+    authors: String(obj.authors || "").trim(),
+    doiOrUrl: String(obj.doiOrUrl || obj.doi || obj.url || "").trim(),
+    summary: Array.isArray(obj.summary) ? obj.summary.filter(Boolean) : wiki.asArray(obj.summary),
+    newKnowledge: Array.isArray(obj.newKnowledge) ? obj.newKnowledge.filter(Boolean) : wiki.asArray(obj.newKnowledge),
+    knowledgeUnits: obj.knowledgeUnits && obj.knowledgeUnits.error ? obj.knowledgeUnits : wiki.normalizeKnowledgeUnits(obj.knowledgeUnits || obj.claims || obj.findings),
+    tags: wiki.unique(obj.tags),
+  };
+}
+function normalizeKnowledge(obj) {
+  return {
+    type: "knowledge",
+    id: obj.id || nowId("knowledge"),
+    category: String(obj.category || "Note").trim(),
+    title: String(obj.title || "Untitled Knowledge").trim(),
+    relatedDiseases: wiki.canonicalArray("disease", obj.relatedDiseases || obj.disease || obj.diseases),
+    relatedGenes: wiki.canonicalArray("gene", obj.relatedGenes || obj.genes),
+    relatedCellTypes: wiki.canonicalArray("cell_type", obj.relatedCellTypes || obj.cellTypes),
+    relatedTissues: wiki.canonicalArray("tissue", obj.relatedTissues || obj.tissues),
+    knowledge: Array.isArray(obj.knowledge) ? obj.knowledge.filter(Boolean) : wiki.asArray(obj.knowledge),
+    source: String(obj.source || "").trim(),
+    tags: wiki.unique(obj.tags),
+  };
+}
+function currentDiseaseNotes() {
+  const notes = {};
+  document.querySelectorAll(".disease-note").forEach((el) => {
+    const key = el.dataset.disease;
+    const value = el.querySelector("textarea").value.split("\n").map((x) => x.trim()).filter(Boolean);
+    if (key && value.length) notes[key] = value;
+  });
+  return notes;
+}
+function renderDiseaseNoteFields(existing = {}) {
+  const box = $("disease-note-fields");
+  const diseases = splitComma("p-disease");
+  const old = { ...currentDiseaseNotes(), ...existing };
+  if (!diseases.length) { box.innerHTML = `<div class="empty-note">Disease를 먼저 입력하세요.</div>`; return; }
+  box.innerHTML = diseases.map((d) => `<div class="disease-note" data-disease="${wiki.escapeHtml(d)}"><label>${wiki.escapeHtml(d)} note</label><textarea placeholder="${wiki.escapeHtml(d)}에서 이 Paper가 중요한 이유를 적어두세요.">${wiki.escapeHtml((old[d] || []).join("\n"))}</textarea></div>`).join("");
+}
+function paperFromForm() {
+  return normalizePaper({
+    id: editType === "paper" ? editId : undefined,
+    disease: splitComma("p-disease"), diseaseNotes: currentDiseaseNotes(), genes: splitComma("p-genes"), cellTypes: splitComma("p-cellTypes"), tissues: splitComma("p-tissues"),
+    title: $("p-title").value, journal: $("p-journal").value, year: $("p-year").value, authors: $("p-authors").value, doiOrUrl: $("p-doiOrUrl").value,
+    summary: splitLines("p-summary"), newKnowledge: splitLines("p-newKnowledge"), knowledgeUnits: parseKnowledgeUnitsBox(), tags: splitComma("p-tags"),
+  });
+}
+function knowledgeFromForm() {
+  return normalizeKnowledge({
+    id: editType === "knowledge" ? editId : undefined,
+    category: $("k-category").value, title: $("k-title").value, relatedDiseases: splitComma("k-diseases"), relatedGenes: splitComma("k-genes"), relatedCellTypes: splitComma("k-cellTypes"), relatedTissues: splitComma("k-tissues"),
+    knowledge: splitLines("k-knowledge"), source: $("k-source").value, tags: splitComma("k-tags"),
+  });
+}
+function validateItem(item) {
+  const errors = [];
+  if (!item || typeof item !== "object") errors.push("JSON object가 아닙니다.");
+  else if (item.type === "paper") {
+    if (!item.title) errors.push("Paper title이 필요합니다.");
+    if (!Array.isArray(item.genes)) errors.push("genes는 배열이어야 합니다.");
+    if (!Array.isArray(item.cellTypes)) errors.push("cellTypes는 배열이어야 합니다.");
+    if (!Array.isArray(item.tissues)) errors.push("tissues는 배열이어야 합니다.");
+    if (!Array.isArray(item.disease)) errors.push("disease는 배열이어야 합니다.");
+    if (item.knowledgeUnits && item.knowledgeUnits.error) errors.push(item.knowledgeUnits.error);
+    if (item.summary && item.summary.length && item.summary.length !== 2) errors.push("summary는 가능하면 정확히 2줄 배열로 맞춰주세요.");
+  } else if (item.type === "knowledge") {
+    if (!item.title) errors.push("Knowledge title이 필요합니다.");
+    if (!Array.isArray(item.knowledge)) errors.push("knowledge는 배열이어야 합니다.");
+  } else errors.push("type은 paper 또는 knowledge여야 합니다.");
+  return errors;
+}
+function saveItems(items) {
+  items.forEach((raw) => {
+    const item = raw.type === "knowledge" ? normalizeKnowledge(raw) : normalizePaper(raw);
+    wiki.upsertLocalItem(item);
+  });
+  renderLocalList();
+}
+function previewPaperForm() { const obj = paperFromForm(); $("paper-preview").value = JSON.stringify(obj, null, 2); $("paper-status").textContent = "미리보기 생성 ✓"; }
+function previewKnowledgeForm() { const obj = knowledgeFromForm(); $("knowledge-preview").value = JSON.stringify(obj, null, 2); $("knowledge-status").textContent = "미리보기 생성 ✓"; }
+function savePaperForm() {
+  const obj = paperFromForm();
+  const errors = validateItem(obj);
+  if (errors.length) { $("paper-status").textContent = errors[0]; return; }
+  const dupes = wiki.duplicatePaperCandidates(obj);
+  if (dupes.length && !confirm(`비슷한/중복 Paper가 ${dupes.length}개 있어요. 그래도 저장할까요?\n\n` + dupes.map((p) => `- ${p.title}`).join("\n"))) return;
+  saveItems([obj]);
+  $("paper-preview").value = JSON.stringify(obj, null, 2);
+  $("paper-status").textContent = editId ? "수정 완료 ✓" : "저장 완료 ✓ 표준화/검색에 바로 반영됩니다.";
+  editId = obj.id; editType = "paper";
+}
+function saveKnowledgeForm() { const obj = knowledgeFromForm(); const errors = validateItem(obj); if (errors.length) { $("knowledge-status").textContent = errors[0]; return; } saveItems([obj]); $("knowledge-preview").value = JSON.stringify(obj, null, 2); $("knowledge-status").textContent = editId ? "수정 완료 ✓" : "저장 완료 ✓ 홈 검색에 바로 반영됩니다."; editId = obj.id; editType = "knowledge"; }
+function parsePasted() { const parsed = JSON.parse($("paste-json").value.trim()); return Array.isArray(parsed) ? parsed : [parsed]; }
+function validatePastedJSON() {
+  const list = $("validation-list"); list.innerHTML = "";
+  try {
+    const items = parsePasted(); let totalErrors = 0;
+    items.forEach((raw, i) => {
+      const item = raw.type === "knowledge" ? normalizeKnowledge(raw) : normalizePaper(raw);
+      const errors = validateItem(item); totalErrors += errors.length;
+      const li = document.createElement("li"); li.className = errors.length ? "bad" : "ok";
+      li.textContent = errors.length ? `${i + 1}번: ${errors.join(" / ")}` : `${i + 1}번: 저장 가능한 ${item.type} JSON입니다.`;
+      list.appendChild(li);
+    });
+    $("paste-status").textContent = totalErrors ? "수정이 필요합니다." : "검증 완료 ✓";
+    return totalErrors === 0;
+  } catch (e) { $("paste-status").textContent = "JSON 형식이 올바르지 않습니다."; list.innerHTML = `<li class="bad">${e.message}</li>`; return false; }
+}
+function savePastedJSON() { if (!validatePastedJSON()) return; const items = parsePasted(); saveItems(items); $("paste-status").textContent = `${items.length}개 저장 완료 ✓`; }
+function exportBackup() { const local = wiki.loadLocalData(); $("backup-box").value = JSON.stringify(local, null, 2); $("backup-status").textContent = "Export 완료 ✓"; }
+function downloadBackup() { exportBackup(); const blob = new Blob([$("backup-box").value], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `biology-second-brain-backup-${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url); }
+function importBackup() { try { const parsed = JSON.parse($("backup-box").value.trim()); const local = { papers: Array.isArray(parsed.papers) ? parsed.papers.map(normalizePaper) : [], knowledge: Array.isArray(parsed.knowledge) ? parsed.knowledge.map(normalizeKnowledge) : [] }; wiki.saveLocalData(local); renderLocalList(); $("backup-status").textContent = "Import 완료 ✓"; } catch (e) { $("backup-status").textContent = "Import 실패: JSON 형식을 확인하세요."; } }
+function clearLocalData() { if (!confirm("브라우저에 저장된 Paper/Knowledge를 모두 지울까요? 백업하지 않았다면 되돌릴 수 없습니다.")) return; wiki.saveLocalData({ papers: [], knowledge: [] }); renderLocalList(); exportBackup(); $("backup-status").textContent = "Local data 삭제 완료"; }
+function renderLocalList() { const local = wiki.loadLocalData(); const box = $("local-list"); if (!box) return; const items = [...local.papers.map((p) => ["Paper", p.title, `${p.journal || ""} ${p.year || ""}`]), ...local.knowledge.map((k) => ["Knowledge", k.title, k.category || "Note"] )]; box.innerHTML = items.length ? items.slice().reverse().map(([type, title, meta]) => `<div class="local-item"><b>${wiki.escapeHtml(type)} · ${wiki.escapeHtml(title)}</b><span>${wiki.escapeHtml(meta)}</span></div>`).join("") : `<div class="local-item"><b>아직 저장된 local data가 없습니다.</b><span>Paper 또는 Knowledge를 저장하면 여기에 표시됩니다.</span></div>`; }
+function setPrompt(type) { $("prompt-box").value = type === "knowledge" ? KNOWLEDGE_PROMPT : PAPER_PROMPT; }
+function copyPrompt() { const box = $("prompt-box"); box.select(); document.execCommand("copy"); }
+function samplePaper() { $("p-disease").value = "PDAC, CRC"; renderDiseaseNoteFields({ "PDAC": ["PDAC에서는 CAF-derived CXCL12가 immune exclusion과 연결됩니다."], "CRC": ["CRC에서는 CXCL12-CXCR4 axis를 metastasis context에서 확인할 수 있습니다."] }); $("p-genes").value = "KRAS, CXCL12"; $("p-cellTypes").value = "CAF, Macrophage"; $("p-tissues").value = "Pancreas, Colon"; $("p-title").value = "Stromal signaling shapes immune exclusion across gastrointestinal cancers"; $("p-journal").value = "Nature"; $("p-year").value = "2025"; $("p-authors").value = "Lee H, Kim J, et al."; $("p-doiOrUrl").value = "https://doi.org/example"; $("p-summary").value = "Tumor microenvironment에서 CAF-derived CXCL12 signal이 immune exclusion과 연결됩니다.\n여러 cancer context에서 stromal niche와 immune localization을 비교했습니다."; $("p-newKnowledge").value = "같은 CXCL12 signal도 Disease context별로 해석을 다르게 저장해야 합니다."; $("p-knowledgeUnits").value = JSON.stringify([{ claim: "CAF-derived CXCL12 is linked to immune exclusion in PDAC", disease: ["PDAC"], genes: ["CXCL12", "CXCR4"], cellTypes: ["CAF", "T cell"], tissues: ["Pancreas"], evidence: "Main result / spatial localization", note: "Disease-specific 해석이 필요한 claim" }], null, 2); $("p-tags").value = "PDAC, CRC, CAF, scRNA-seq"; previewPaperForm(); }
+function sampleKnowledge() { $("k-category").value = "Gene"; $("k-title").value = "CXCL12 axis in PDAC"; $("k-diseases").value = "PDAC"; $("k-genes").value = "CXCL12, CXCR4"; $("k-cellTypes").value = "CAF, T cell"; $("k-tissues").value = "Pancreas"; $("k-knowledge").value = "CAF-derived CXCL12 may shape immune exclusion in PDAC.\nCXCR4-positive immune cells와 spatial distribution을 같이 확인하면 좋습니다."; $("k-source").value = "랩미팅 메모"; $("k-tags").value = "PDAC, immune exclusion"; previewKnowledgeForm(); }
+function activateTab(tab) { document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab)); document.querySelectorAll(".tab-panel").forEach((p) => p.classList.toggle("active", p.id === "tab-" + tab)); renderLocalList(); }
+function loadEditItem() {
+  if (!editId || !editType) return;
+  const found = wiki.findLocalItem(editType, editId);
+  if (!found.item) return;
+  $("page-title").textContent = editType === "paper" ? "Paper 수정" : "Knowledge 수정";
+  $("mode-label").textContent = "Edit local item";
+  if (editType === "paper") {
+    const p = normalizePaper(found.item); activateTab("paper"); $("paper-save-btn").textContent = "Update Paper"; $("p-disease").value = (p.disease || []).join(", "); renderDiseaseNoteFields(p.diseaseNotes || {}); $("p-genes").value = (p.genes || []).join(", "); $("p-cellTypes").value = (p.cellTypes || []).join(", "); $("p-tissues").value = (p.tissues || []).join(", "); $("p-title").value = p.title || ""; $("p-journal").value = p.journal || ""; $("p-year").value = p.year || ""; $("p-authors").value = p.authors || ""; $("p-doiOrUrl").value = p.doiOrUrl || ""; $("p-summary").value = (p.summary || []).join("\n"); $("p-newKnowledge").value = (p.newKnowledge || []).join("\n"); $("p-knowledgeUnits").value = (p.knowledgeUnits || []).length ? JSON.stringify(p.knowledgeUnits, null, 2) : ""; $("p-tags").value = (p.tags || []).join(", "); previewPaperForm();
+  } else {
+    const k = normalizeKnowledge(found.item); activateTab("knowledge"); $("knowledge-save-btn").textContent = "Update Knowledge"; $("k-category").value = k.category || "Note"; $("k-title").value = k.title || ""; $("k-diseases").value = (k.relatedDiseases || []).join(", "); $("k-genes").value = (k.relatedGenes || []).join(", "); $("k-cellTypes").value = (k.relatedCellTypes || []).join(", "); $("k-tissues").value = (k.relatedTissues || []).join(", "); $("k-knowledge").value = (k.knowledge || []).join("\n"); $("k-source").value = k.source || ""; $("k-tags").value = (k.tags || []).join(", "); previewKnowledgeForm();
+  }
+}
+document.querySelectorAll(".tab-btn").forEach((btn) => btn.addEventListener("click", () => activateTab(btn.dataset.tab)));
+$("p-disease").addEventListener("input", () => renderDiseaseNoteFields());
+setPrompt("paper"); renderDiseaseNoteFields(); renderLocalList(); loadEditItem();
+</script>
+</body>
+</html>

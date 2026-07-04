@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>My Library · Biology Second Brain</title>
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="mark"></span><a href="../index.html">Biology Second Brain</a><span class="sub">/ my library</span></div>
+  <nav class="top-links">
+    <a href="../index.html">Home</a>
+    <a href="add.html">+ Add</a>
+  </nav>
+</header>
+<ul class="base-track"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></ul>
+<main class="shell">
+  <section class="hero" style="padding-bottom:26px;">
+    <div class="hero-eyebrow">Local papers · local knowledge</div>
+    <h1>My Library</h1>
+    <p>이 브라우저에 저장한 Paper와 Knowledge를 관리합니다. 여기서 Edit/Delete하면 검색 결과와 자동 연결도 바로 다시 계산됩니다.</p>
+    <div class="search-wrap">
+      <div class="search-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="library-filter" type="text" placeholder="내 Library에서 Paper, Disease, Gene, Tag 검색" autocomplete="off" />
+      </div>
+    </div>
+  </section>
+
+  <div class="app-banner">
+    <div class="mini-panel"><h3>Local Data</h3><p id="library-counts">불러오는 중...</p></div>
+    <a class="mini-panel" href="add.html"><h3>새 Paper / Knowledge 추가 →</h3><p>GPT JSON 붙여넣기, 직접 입력, Backup 기능을 사용할 수 있습니다.</p></a>
+  </div>
+
+  <div class="section-label">Saved Papers</div>
+  <div class="paper-list" id="paper-list"></div>
+
+  <div class="section-label">Saved Knowledge</div>
+  <div class="paper-list" id="knowledge-list"></div>
+</main>
+<footer>Delete는 localStorage에서만 삭제합니다. 삭제 전 백업을 권장합니다.</footer>
+<script src="../assets/data.js"></script>
+<script src="../assets/search.js"></script>
+<script>
+const wiki = window.BiologyWiki;
+const $ = (id) => document.getElementById(id);
+let local = wiki.loadLocalData();
+function textFor(item) {
+  return [item.title, item.category, item.journal, item.year, item.authors, item.source, ...(item.disease || []), ...(item.genes || []), ...(item.cellTypes || []), ...(item.tissues || []), ...(item.relatedDiseases || []), ...(item.relatedGenes || []), ...(item.relatedCellTypes || []), ...(item.relatedTissues || []), ...(item.tags || []), ...Object.values(item.diseaseNotes || {}).flat()].join(" ").toLowerCase();
+}
+function meta(items) { return items && items.length ? items.map((x) => `<span class="tag">${wiki.escapeHtml(x)}</span>`).join("") : ""; }
+function deleteItem(type, id, title) {
+  if (!confirm(`삭제할까요?\n\n${title}\n\n이 작업은 이 브라우저의 localStorage에서만 삭제되며 되돌릴 수 없습니다.`)) return;
+  wiki.deleteLocalItem(type, id);
+  local = wiki.loadLocalData();
+  render();
+}
+function paperCard(p) {
+  const item = wiki.normalizePaper(p);
+  return `<div class="paper-card manage-card">
+    <div class="paper-main">
+      <p class="paper-title">${wiki.escapeHtml(item.title)}</p>
+      <div class="paper-meta"><span>${wiki.escapeHtml(item.journal || "Journal 없음")}</span><span>·</span><span>${wiki.escapeHtml(item.year || "Year 없음")}</span><span>·</span><span>${wiki.escapeHtml((item.disease || []).join(", "))}</span></div>
+      <div class="tag-row">${meta(item.tags)}${meta(item.genes)}${meta(item.cellTypes)}</div>
+    </div>
+    <div class="manage-actions">
+      <a class="btn secondary" href="${wiki.entityUrl(item, "../")}">Open</a>
+      <a class="btn secondary" href="add.html?type=paper&edit=${encodeURIComponent(item.id)}">Edit</a>
+      <button class="btn danger" onclick="deleteItem('paper','${wiki.escapeHtml(item.id)}','${wiki.escapeHtml(item.title)}')">Delete</button>
+    </div>
+  </div>`;
+}
+function knowledgeCard(k) {
+  const item = wiki.normalizeKnowledge(k);
+  return `<div class="paper-card manage-card">
+    <div class="paper-main">
+      <p class="paper-title">${wiki.escapeHtml(item.title)}</p>
+      <div class="paper-meta"><span>${wiki.escapeHtml(item.category || "Knowledge")}</span><span>·</span><span>${wiki.escapeHtml(item.source || "개인 메모")}</span></div>
+      <div class="tag-row">${meta(item.tags)}${meta(item.relatedDiseases)}${meta(item.relatedGenes)}</div>
+    </div>
+    <div class="manage-actions">
+      <a class="btn secondary" href="${wiki.entityUrl(item, "../")}">Open</a>
+      <a class="btn secondary" href="add.html?type=knowledge&edit=${encodeURIComponent(item.id)}">Edit</a>
+      <button class="btn danger" onclick="deleteItem('knowledge','${wiki.escapeHtml(item.id)}','${wiki.escapeHtml(item.title)}')">Delete</button>
+    </div>
+  </div>`;
+}
+function render() {
+  const q = $("library-filter").value.trim().toLowerCase();
+  const papers = (local.papers || []).filter((p) => !q || textFor(p).includes(q));
+  const knowledge = (local.knowledge || []).filter((k) => !q || textFor(k).includes(q));
+  $("library-counts").innerHTML = `<b>${local.papers.length}</b> Paper · <b>${local.knowledge.length}</b> Knowledge 저장됨`;
+  $("paper-list").innerHTML = papers.length ? papers.slice().reverse().map(paperCard).join("") : `<div class="paper-card"><div class="paper-main"><p class="paper-title">저장된 Paper가 없습니다.</p><div class="paper-meta"><span>+ Add에서 Paper를 저장하세요.</span></div></div></div>`;
+  $("knowledge-list").innerHTML = knowledge.length ? knowledge.slice().reverse().map(knowledgeCard).join("") : `<div class="paper-card"><div class="paper-main"><p class="paper-title">저장된 Knowledge가 없습니다.</p><div class="paper-meta"><span>+ Add에서 Knowledge를 저장하세요.</span></div></div></div>`;
+}
+$("library-filter").addEventListener("input", render);
+render();
+</script>
+</body>
+</html>

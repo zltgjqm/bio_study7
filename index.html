@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Biology Second Brain</title>
+<link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="mark"></span> Biology Second Brain <span class="sub">/ personal wiki</span></div>
+  <nav class="top-links">
+    <a href="#diseases">Disease</a>
+    <a href="#genes">Gene</a>
+    <a href="#cells">Cell Type</a>
+    <a href="#tissues">Tissue</a>
+    <a href="#papers">Paper</a>
+    <a href="pages/library.html">My Library</a>
+    <a href="pages/add.html" style="color: var(--accent-cell);">+ Add</a>
+  </nav>
+</header>
+
+<ul class="base-track"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></ul>
+
+<main class="shell">
+  <section class="hero">
+    <div class="hero-eyebrow">Disease → Gene → Cell Type → Tissue → Paper</div>
+    <h1>Biology Second Brain</h1>
+    <p>논문을 읽으며 발견한 Gene, Cell Type, Tissue, Disease를 연결하여 언제든 다시 찾을 수 있는 개인 Biology Wiki</p>
+    <div class="search-wrap">
+      <div class="search-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="search-input" type="text" placeholder="Gene, Cell Type, Tissue, Disease, Paper를 검색하세요." autocomplete="off" />
+        <span class="search-kbd">/</span>
+      </div>
+      <div id="search-results" class="search-results"></div>
+    </div>
+  </section>
+
+  <div class="app-banner">
+    <div class="mini-panel">
+      <h3>홈페이지에서 바로 저장하는 Biology Wiki</h3>
+      <p><b>+ Add</b>에서 Paper 또는 Knowledge를 입력하고, <b>My Library</b>에서 Edit/Delete로 관리하세요. GitHub를 매번 수정하지 않아도 검색과 자동 연결에 바로 반영됩니다.</p>
+      <div class="count-row" id="count-row"></div>
+    </div>
+    <a class="mini-panel" href="pages/add.html">
+      <h3>새로운 Biology Knowledge 추가 →</h3>
+      <p>직접 입력하거나, ChatGPT가 만든 JSON을 붙여넣어 저장하세요. Paper Prompt와 Knowledge Prompt도 복사할 수 있습니다.</p>
+    </a>
+  </div>
+
+  <div class="section-label">둘러보기</div>
+  <div class="card-grid">
+    <a class="cat-card disease" href="#diseases" id="diseases"><div class="icon">Dx</div><h3>Disease</h3><p>Disease별 Major Genes, Cell Types, Tissues, Related Papers를 한 번에 봅니다.</p><span class="go">View →</span></a>
+    <a class="cat-card gene" href="#genes" id="genes"><div class="icon">Aa</div><h3>주요 Gene</h3><p>Paper에서 반복적으로 등장한 Gene와 관련 Disease, Cell Type을 연결합니다.</p><span class="go">View →</span></a>
+    <a class="cat-card cell" href="#cells" id="cells"><div class="icon">◍</div><h3>Cell Type</h3><p>Marker Gene와 Tissue context, Related Paper를 함께 탐색합니다.</p><span class="go">View →</span></a>
+    <a class="cat-card tissue" href="#tissues" id="tissues"><div class="icon">▤</div><h3>Tissue</h3><p>Tissue별 Disease, Gene, Cell Type, Paper 연결을 확인합니다.</p><span class="go">View →</span></a>
+  </div>
+
+  <div class="section-label">빠른 목록</div>
+  <div class="card-grid" id="quick-lists"></div>
+
+  <div class="section-label" id="papers">최근 추가한 Paper</div>
+  <div class="paper-list" id="paper-list"></div>
+
+  <div class="section-label">최근 추가한 Knowledge</div>
+  <div class="paper-list" id="knowledge-list"></div>
+</main>
+
+<footer>Biology Second Brain — API 없이 직접 관리하는 개인 Biology Wiki.</footer>
+<script src="assets/data.js"></script>
+<script src="assets/search.js"></script>
+<script>
+  const wiki = window.BiologyWiki;
+  window.initWikiSearch({ inputId: "search-input", resultsId: "search-results" });
+  const graph = wiki.buildKnowledgeGraph(window.WIKI_DATA);
+
+  const counts = document.getElementById("count-row");
+  const local = wiki.loadLocalData();
+  counts.innerHTML = [
+    ["Disease", graph.diseases.length], ["Gene", graph.genes.length], ["Cell Type", graph.cellTypes.length], ["Tissue", graph.tissues.length], ["Paper", graph.papers.length], ["Local", local.papers.length + local.knowledge.length]
+  ].map(([label, count]) => `<span class="count-pill"><b>${count}</b> ${label}</span>`).join("");
+
+  const quick = document.getElementById("quick-lists");
+  [
+    ["Disease", graph.diseases, "disease"],
+    ["Gene", graph.genes, "gene"],
+    ["Cell Type", graph.cellTypes, "cell"],
+    ["Tissue", graph.tissues, "tissue"],
+  ].forEach(([title, items, cls]) => {
+    const card = document.createElement("div");
+    card.className = `cat-card ${cls}`;
+    card.innerHTML = `<h3>${title}</h3><div class="chip-row">${items.slice(0, 10).map((item) => `<a class="chip" href="${wiki.entityUrl(item)}"><span class="dot ${item.type}"></span>${wiki.escapeHtml(item.displayName)}</a>`).join("")}</div>`;
+    quick.appendChild(card);
+  });
+
+  const list = document.getElementById("paper-list");
+  graph.papers.slice().sort((a,b) => (b.year || 0) - (a.year || 0)).forEach((p) => {
+    const el = document.createElement("a");
+    el.className = "paper-card";
+    el.href = wiki.entityUrl(p);
+    el.innerHTML = `<div class="paper-main"><p class="paper-title">${wiki.escapeHtml(p.title)}</p><div class="paper-meta"><span>${wiki.escapeHtml(p.authors || "")}</span><span>·</span><span>${wiki.escapeHtml(p.journal || "")}</span><span>·</span><span>${wiki.escapeHtml(p.year || "")}</span></div><div class="tag-row">${(p.tags || []).map((t) => `<span class="tag">${wiki.escapeHtml(t)}</span>`).join("")}</div></div><span class="paper-open">Open →</span>`;
+    list.appendChild(el);
+  });
+
+  const kList = document.getElementById("knowledge-list");
+  if (!graph.knowledge.length) {
+    kList.innerHTML = `<div class="paper-card"><div class="paper-main"><p class="paper-title">아직 추가한 Knowledge가 없습니다.</p><div class="paper-meta"><span>+ Add에서 개인 지식을 저장해보세요.</span></div></div></div>`;
+  } else {
+    graph.knowledge.slice().reverse().forEach((k) => {
+      const el = document.createElement("a");
+      el.className = "paper-card";
+      el.href = wiki.entityUrl(k);
+      el.innerHTML = `<div class="paper-main"><p class="paper-title">${wiki.escapeHtml(k.title)}</p><div class="paper-meta"><span>${wiki.escapeHtml(k.category || "Knowledge")}</span><span>·</span><span>${wiki.escapeHtml(k.source || "개인 메모")}</span></div><div class="tag-row">${(k.tags || []).map((t) => `<span class="tag">${wiki.escapeHtml(t)}</span>`).join("")}</div></div><span class="paper-open">Open →</span>`;
+      kList.appendChild(el);
+    });
+  }
+</script>
+</body>
+</html>
